@@ -23,7 +23,7 @@ sys.path.insert(0, 'geo_gcn/src')
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning) 
 warnings.filterwarnings("ignore", category=UserWarning) 
-
+# Defines the architecture of VGAE. 
 class VariationalGCNEncoder(torch.nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -35,6 +35,7 @@ class VariationalGCNEncoder(torch.nn.Module):
         x = self.conv1(x, edge_index).relu()
         return self.conv_mu(x, edge_index), self.conv_logstd(x, edge_index)
 
+# Defines the architecture of GAE
 class GCNEncoder(torch.nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -44,7 +45,9 @@ class GCNEncoder(torch.nn.Module):
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index).relu()
         return self.conv2(x, edge_index)
-
+#
+# Failed attempts for using SGCN. Will not be used in the project
+#
 # class SGCNEncoder(torch.nn.Module):
 #     def __init__(self, in_channels, out_channels):
 #         super().__init__()
@@ -73,26 +76,21 @@ class GCNEncoder(torch.nn.Module):
 #         # res1 = self.conv_mu(data.x, data.pos, data.edge_index)
 #         # res2 = self.conv_logstd(data.x,data.pos, data.edge_index)
 #         # return res1, res2
+#
+# -------------------------------
+#
+
+# Wrapper class for the project, defines model, layouts & stuff
 class LayoutRater:
     def __init__(self):
-        # self.train_graph_list = [686, 0, 414, 1684]
-        # self.test_graph_list = [3980, 698]
         self.variational_flag = False
         self.num_test_layout = 4
         self.in_channels = 2
         self.out_channels = 16
-        #self.use_spatial = False
-        #self.graph_id=3980
-        #self.num_of_train_layout = 50
-        # self.test_layout_func_list = [MDS.mds_layout, nx.spiral_layout, nx.spring_layout, nx.circular_layout]
-        # self.num_test_layout = len(self.test_layout_func_list)
-        # self.num_graph = len(self.test_graph_list)
-        # self.train_data, self.test_data = preprocess.readData(self.train_graph_list, self.test_graph_list, self.test_layout_func_list)
-        
-        #self.original_graph = preprocess.convertGraph(self.graph_id)
-        #self.baseline_train_data, self.baseline_test_data = preprocess.readData(self.graph_id, self.num_of_train_layout, self.test_layout_func_list, baseline=True)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        #self.device=torch.device('cpu')
+    
+    # loads data from 'train' or 'test'.
+    # The files are preprocessed in preprocess.py
     def loadData(self, train_filename, test_filename):
         dirname = os.path.dirname(__file__)
 
@@ -101,6 +99,10 @@ class LayoutRater:
         train_data = torch.load(train_filepath)
         test_data = torch.load(test_filepath)
         return train_data, test_data
+    
+    # loads trained model to avoid retraining every run.
+    # model_name should be either "VGAE" or "GAE"
+    # assumes that the model is located in same folder with filename "VGAE" or "GAE"
     def load_model(self, model_name):
         if model_name == "VGAE":
                 model = VGAE(VariationalGCNEncoder(self.in_channels, self.out_channels))
@@ -111,6 +113,11 @@ class LayoutRater:
         model.load_state_dict(torch.load(model_filepath))
         model=model.to(self.device)
         return model
+    
+    # train & save model
+    # train_loader: train dataset
+    # test_loader: test dataset.
+    # assumed to be of type DataLoader in torch_geometric.loader
     def generate_model(self, train_loader, test_loader):
         #graphList = [0, 107, 348, 414, 686, 698, 1684, 1912, 3437, 3980]
         # initializing model
@@ -132,23 +139,30 @@ class LayoutRater:
             train_loss = self.train(model=model, optimizer=optimizer, train_loader=train_loader)
             train_loss_values.append(train_loss.item())
             
+            # use test dataset also as validation dataset for preliminary experiments
             #val_loss = self.validate(model=model, dataLoader=test_loader)
             #val_loss_values.append(val_loss.item())
 
             print(epoch, train_loss.item())
             print("-----------")
+
         # save model
         dirname = os.path.dirname(__file__)
         model_filepath = os.path.join(dirname, model_name)
         torch.save(model.state_dict(), model_filepath)
-        #self.test(model=model,dataLoader=test_loader)
+
+        #
+        # plot the loss curve of train dataset and validation dataset
+        # used in preliminary experiments.
+        #
         # fig=plt.figure(1, figsize=(8, 6), dpi=80)
         # ax = fig.add_subplot(111)
         # ax.plot(train_loss_values, c='red')
         # ax.plot(val_loss_values, c='blue')
         # plt.show() 
-#print(f'Epoch: {epoch:03d}, AUC: {auc:.4f}, AP: {ap:.4f}')
 
+    # train the model
+    # uses different loss functions for GAE & VGAE
     def train(self, model, optimizer, train_loader):
         model.train()
         total_loss = 0;
@@ -168,6 +182,9 @@ class LayoutRater:
             loss.backward()
             optimizer.step()
         return total_loss / len(train_loader.dataset)
+
+    # Valiation function used in preliminary experiments
+    # *can ignore
     @torch.no_grad()
     def validate(self, model, dataLoader):
         model.eval()
@@ -200,111 +217,86 @@ class LayoutRater:
             #print(data.graph_tag.item(), data.layout_tag.item(), "loss=", "{0:.5f}".format(loss.item()), "dist=", "{0:.5f}".format(dist))
             graph_loss_dict[data.graph_tag.item()][data.layout_tag.item()] = loss.item()
             
-        #preprocess.showLayout(dataLoader, self.test_layout_func_list)
+        #preprocess.showLayout(dataLoader)
         return total_loss/len(dataLoader)
+
+    # test the model
     def test(self, model, dataLoader):
         model.eval()
-        from collections import defaultdict
-        graph_loss_dict = defaultdict(lambda: [0] * self.num_test_layout)
         total_loss=0
-        
-        
+    
         #test_data_with_metric = []
         losses = []
         for data in dataLoader:
             data = data.to(self.device)
             z = model.encode(data.x,  data.edge_index)
-            auc, ap = model.test(z, data.pos_edge_index, data.neg_edge_index)
+            
+            
+            # get link prediction results. 
+            #auc, ap = model.test(z, data.pos_edge_index, data.neg_edge_index)
+
+            # Get reconstructed grap with type networkx.graph
             recon_graph = preprocess.edge_index_to_graph(data.num_nodes, data.pos_edge_index.cpu().numpy(), model.decode(z, data.pos_edge_index))
             assert nx.number_of_nodes(recon_graph) == data.num_nodes
+            # Get original graph with type networkx.graph
             tmp_data = Data(x=data.x, edge_index=data.pos_edge_index)
             original_graph = cv.to_networkx(tmp_data, to_undirected=True)
-            #print(recon_graph, original_graph, data)
-            #print(original_graph)
+
+            # calculate L1 difference between reconstructed graph and original graph
             dist = L1_dist(recon_graph, original_graph)
-            #base_dist = L1_dist(baseline_graph, original_graph)
+            
+            # calculate loss
             loss = model.recon_loss(z, data.pos_edge_index)
             if self.variational_flag:
                 loss = loss + (1 / data.num_nodes) * model.kl_loss()
-            #loss = model.kl_loss()
             total_loss+=loss
+            #
+            # get aeathetic metrics on test graphs
+            # E_c should take longer time to compute
+            # if loading from 'test_data_w_metric_n', then avoid calculating metrics to save time
+            # if loading from 'test', then need to uncomment the codes below for computing pearson_coefficient_correlation
+            #
+            
             # M_l = layout_metrics.edge_length_variation(data.cpu())
             # M_a = layout_metrics.minimum_angle(data.cpu())
             # print("calculating E_c...")
             # E_c = layout_metrics.edge_crossings(data.cpu())
+
+            # guard
             if not hasattr(data, 'M_l'):
                data = preprocess.add_readability_metrics(data.cpu())
-            M_l = layout_metrics.edge_length_variation(data.cpu())
+            
+            M_l = data.M_l.item()
             M_a = data.M_a.item()
             E_c = data.E_c.item()
-            # M_l = 0
-            # M_a = 0
-            # E_c = 0
-            data.M_l = M_l
-            # data.M_a = M_a
-            # data.E_c = E_c
+
             #test_data_with_metric.append(data)
 
             #tag = data.graph_tag # for train_data 
             tag = data.graph_tag.item() # for test_data
             print(tag, data.layout_tag.item(), ap, "loss=", "{0:.5f}".format(loss.item()), "dist=", "{0:.5f}".format(dist), "M_l=", "{0:.5f}".format(M_l), "M_a=", "{0:.5f}".format(M_a), "E_c=", "{0:.5f}".format(E_c))
+            
             losses.append(loss.item())
-            #graph_loss_dict[data.graph_tag.item()][data.layout_tag.item()] = loss.item()
-           
-            #print(data)
-        #dirname = os.path.dirname(__file__)
-        #test_filepath = os.path.join(dirname, 'test_data_w_metrics_' + str(test_graph_id))
-        #torch.save(test_data_with_metric, test_filepath)
-        #preprocess.showLayout(dataLoader)
 
+        # calculate pearson correlation between loss and aesthetic metrics
         pearson_correlation(losses=losses, dataLoader=dataLoader)
         return total_loss/len(dataLoader)
+
+    # deprecated. used in preliminary experiments
     def recon_baseline_graph(self, data):
         #TS = data.x.numpy()
         TS = np.array(preprocess.generateNodeDist(data.x.cpu().numpy()))
         reconstructor = netrd.reconstruction.FreeEnergyMinimization()
         G = reconstructor.fit(TS, avg_k = 8.85)
-        #print(dist)
-        #print(G)
         return G
+
+
 def L1_dist(G1, G2):
     return np.absolute(nx.adjacency_matrix(G1).todense() - nx.adjacency_matrix(G2).todense()).sum()
 
 
-def compare(item1, item2):
-    key1 = item1.split(" ")[0][2:-2]
-    key2 = item2.split(" ")[0][2:-2]
-    if key1 == key2:
-        key11 = item1.split(" ")[1][0]
-        key22 = item2.split(" ")[1][0]
-        if key11 < key22:
-            return -1
-        else:
-            return 1
-    if key1 < key2:
-        return -1
-    else:
-        return 1
-def gen_layout_metrics(data):
-    dirname = os.path.dirname(__file__)
-    filepath = os.path.join(dirname, 'eva.txt') 
-
-    file1 = open(filepath, 'r')
-    data = []
-    for line in file1.readlines():
-        line = line.strip()
-        if line == "":
-            continue
-        if line[0] == "c":
-            continue
-        data.append(line)
-    from functools import cmp_to_key
-
-    data = sorted(data, key=cmp_to_key(compare))
-    print(*data, sep = "\n")
-    with open(filepath, 'w') as f:
-        for line in data:
-            f.write(line + "\n")
+# computes pearson coefficient correlation.
+# if metrics is None, then assumes that dataLoader has attributes M_l, M_a and E_c
 def pearson_correlation(losses, dataLoader, metrics=None):
     if metrics == None:
         M_l_samples = np.array([data.M_l.item() for data in dataLoader])
@@ -325,27 +317,31 @@ def pearson_correlation(losses, dataLoader, metrics=None):
 
 
 if __name__ == "__main__":
-    
+    # init model
     l = LayoutRater()
+    # variational_flag is used to choose between GAE and VGAE.
+    # True -> use VGAE
+    # False -> use GAE
     l.variational_flag=False
+    # load data from files.
     train_data, test_data = l.loadData('train', "test_data_w_metrics_0")
 
+    # wrap in DataLoader
     train_loader = DataLoader(train_data, batch_size=1, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
 
-    # tmp = []
-    # for data in test_data:
-    #     M_l = layout_metrics.edge_length_variation(data)
-    #     print(data, M_l)
-    # preprocess.save_data(tmp, 'test_data_w_metrics_698')
+    # train model 
     #l.generate_model(train_loader, test_loader)
+    
+    # load previously trained model
+    # assumes that saved model is located in same folder and named 'VGAE' or 'GAE'
     if l.variational_flag:
         model = l.load_model('VGAE')
         print("VGAE")
     else:
         model = l.load_model('GAE')
         print("GAE")
-
+    # test model
     l.test(model=model,dataLoader=test_loader)
 
 

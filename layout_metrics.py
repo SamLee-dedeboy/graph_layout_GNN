@@ -2,10 +2,13 @@ from sklearn import neighbors
 from torch_geometric.data import Data
 import numpy as np
 import math
+# wrapper class for converting pos=[x,y] to a point
 class Point:
     def __init__(self, pos):
         self.x = pos[0]
         self.y = pos[1]
+
+# calculates edge length variation
 def edge_length_variation(graphData):
     nodes = graphData.x.numpy()
     edges = np.transpose(graphData.pos_edge_index.numpy())
@@ -16,6 +19,8 @@ def edge_length_variation(graphData):
     l_a = np.sqrt(np.sum([(l_e - l_mu)**2/(E_n*(l_mu**2)) for l_e in edge_length_list]))
     M_l = l_a/(np.sqrt(E_n - 1))
     return M_l
+
+# calculates edge crossings
 def edge_crossings(graphData):
     nodes = graphData.x.numpy()
     edges = np.transpose(graphData.pos_edge_index.numpy())
@@ -26,6 +31,8 @@ def edge_crossings(graphData):
             edge2 = edges[j]
             cross_num += check_cross(edge1, edge2, nodes)
     return cross_num
+
+# calculates minimum angle
 def minimum_angle(graphData):
     nodes = graphData.x.numpy()
     edges = np.transpose(graphData.pos_edge_index.numpy())
@@ -36,6 +43,7 @@ def minimum_angle(graphData):
     minimum_angle_list = [360/len(edges_dict[i]) if len(edges_dict[i])!=0 else 0 for i in range(num_nodes)]
     M_a = 1 - np.sum([(incident_angle_list[v] - minimum_angle_list[v])/minimum_angle_list[v] if minimum_angle_list[v] !=0 else 0 for v in range(num_nodes)])/num_nodes
     return M_a
+# used in calculating Minimum Angle
 def gen_edges_dict(edges, num_nodes):
     edges_dict = [[] for _ in range(num_nodes)]
     for edge in edges:
@@ -43,6 +51,8 @@ def gen_edges_dict(edges, num_nodes):
         node2 = edge[1]
         edges_dict[node1].append(node2)
     return edges_dict
+
+# used in calculating Minimum Angle
 def incident_min_angle(o_pos, neighbors_pos):
     n_neighbors = len(neighbors_pos)
     if n_neighbors <= 1:
@@ -54,6 +64,7 @@ def incident_min_angle(o_pos, neighbors_pos):
     min_angle = np.min(incident_angle_list)
     return min_angle
 
+# used in calculating Minimum Angle
 def incident_angle(C, B, A):
     # C as origin 
     a = math.dist(C, B)
@@ -61,26 +72,29 @@ def incident_angle(C, B, A):
     c = math.dist(A, B)
     cos_C = (a**2 + b**2 - c**2)/(2*a*b)
     return math.degrees(math.acos(cos_C))
+
+# used in calculating edge crossings
 def check_cross(e1, e2, nodes):
     p1 = Point(nodes[e1][0])
     p2 = Point(nodes[e1][1])
     q1 = Point(nodes[e2][0])
     q2 = Point(nodes[e2][1])
     return int(doIntersect(p1, q1, p2, q2))
+
+# used in calculating edge crossings
 def onSegment(p, q, r):
     if ( (q.x <= max(p.x, r.x)) and (q.x >= min(p.x, r.x)) and
            (q.y <= max(p.y, r.y)) and (q.y >= min(p.y, r.y))):
         return True
     return False
+
+# used in calculating edge crossings
 def orientation(p, q, r):
     # to find the orientation of an ordered triplet (p,q,r)
     # function returns the following values:
     # 0 : Collinear points
     # 1 : Clockwise points
     # 2 : Counterclockwise
-     
-    # See https://www.geeksforgeeks.org/orientation-3-ordered-points/amp/
-    # for details of below formula.
      
     val = (float(q.y - p.y) * (r.x - q.x)) - (float(q.x - p.x) * (r.y - q.y))
     if (val > 0):
@@ -95,6 +109,8 @@ def orientation(p, q, r):
          
         # Collinear orientation
         return 0
+
+# used in calculating edge crossings
 def doIntersect(p1,q1,p2,q2):
     # Find the 4 orientations required for
     # the general and special cases
@@ -128,6 +144,7 @@ def doIntersect(p1,q1,p2,q2):
     # If none of the cases
     return False
 
+# used in calculating edge length variation
 def edge_length(edge, nodes):
     n1 = edge[0]
     n2 = edge[1]
