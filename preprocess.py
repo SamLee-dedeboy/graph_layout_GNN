@@ -24,7 +24,7 @@ def generateDataset(train_graph_list, test_graph_list, test_layout_func_list):
     #
     # train dataset
     for g in train_graph_list:
-        graphData = readRawData("../dataset/facebook/" + str(g) + ".edges")
+        graphData = readRawData("dataset/facebook/" + str(g) + ".edges")
         graph_data_list = sub_sample_large_graph(graphData, g)
         for index, sub_graph_data in enumerate(graph_data_list):
             sub_graph_data = add_neg_edges(sub_graph_data)
