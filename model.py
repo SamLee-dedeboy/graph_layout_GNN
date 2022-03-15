@@ -274,7 +274,7 @@ class LayoutRater:
 
             #tag = data.graph_tag # for train_data 
             tag = data.graph_tag.item() # for test_data
-            print(tag, data.layout_tag.item(), ap, "loss=", "{0:.5f}".format(loss.item()), "dist=", "{0:.5f}".format(dist), "M_l=", "{0:.5f}".format(M_l), "M_a=", "{0:.5f}".format(M_a), "E_c=", "{0:.5f}".format(E_c))
+            print(tag, data.layout_tag.item(), "loss=", "{0:.5f}".format(loss.item()), "dist=", "{0:.5f}".format(dist), "M_l=", "{0:.5f}".format(M_l), "M_a=", "{0:.5f}".format(M_a), "E_c=", "{0:.5f}".format(E_c))
             
             losses.append(loss.item())
 
