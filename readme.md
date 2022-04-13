@@ -21,6 +21,44 @@ Since GNNs are trained on the graph adjacent matrix, GNN-based approaches can ev
 The goal of the project is to give scores on different layouts on the save graph, based on the graph connectivity features and the layout features.
 This is achieved by first generate a subgraph of the original $G$, and then use the $GAE$ model to reconstruct the original graph, using the node positions as node features. For mode detailed explanation, refer to `report.pdf`.
 
+## Results
+Sections below presents the results of this project. 
+More detailed explanation and insights are described in Section 5 in `report.pdf`. 
+### Reconstruction Efficacy
+The efficacy of reconstructing adjacent matrix from node coordinates is not shown by previous studies.
+To prove the efficacy, a link prediction is conducted by the model. 
+The model trys to reconstruct the edges from existing edges and node features, which are node coordinates in this case.
+The missing edge rate is set to 50 percent, i.e. only 50 percent of edges is remaining, and the model will reconstruct the missing 50 percent edges.
+Table below presents the link prediction accuracy on the test dataset. 
+Left in the cell is accuracy on GAE and right is VGAE.
+The average accuracy is **0.769** for GAE and **0.776** for VGAE, proving that reconstructing adjacency matrix from node coordinates is viable.
+| graph \layout | MDS | spiral | spring | circular |
+| :--: | :----: | :-------: | :----------: | :-------: |
+| 0 | 0.827/0.834 | 0.832/0.837 | 0.826/0.832 | 0.847/0.851 |
+|414 | 0.767/0.782 | 0.745/0.753 | 0.740/0.746 | 0.776/0.782 |
+|3980 | 0.724/0.729 | 0.723/0.733 | 0.732/0.746 | 0.778/0.790 |
+|698 | 0.687/0.671 | 0.752/0.758 | 0.785/0.794 | 0.774/0.782 |
+
+### Correlation to Aesthetics Metrics
+To evaluate the ranking result, and therefore the efficacy of the project, the correlation between test reconstruction loss and aesthetic metrics is investigated.
+Three aesthetic metrics are used: (1)$M_l$: edge length variation (2) $M_a$: Minimum Angle (3) $E_c$: Edge crossings.
+
+The correlation score $coef$ is calculated by the `Pearson correlation coefficients`.
+A score of 1 means strong positive correlation, -1 means strong negative correlation, and 0 means no correlation.
+Since the three aesthetic metrics are expected to be minimized as well as the reconstruction loss,
+a $coef$ score of 1 should indicate a better performance.
+Table below shows the correlation score $coef$ between reconstuction loss and the three aesthetic metrics on four test graphs for GAE/VGAE.
+
+|graph\metric | $M_l$ | $M_a$ | $E_c$ |
+| :--: | :----: | :-------: | :----------: |
+| 0 | -0.648/**0.904** | -0.530/0.612 | 0.604/0.040|    
+| 414 | -0.425/0.479 | 0.147/**0.861** | -0.425/-0.289  |
+| 3980 | 0.816/0.437 | -0.943/-0.695 | -0.684/-0.985 |
+| 698 | 0.873/**0.954** | 0.937/**0.984** | -0.428/-0.001  |
+
+The result shows that the model is able to find the aesthetically best layout based on the graph connectivity features,
+even though in the architecture no aesthetic metric is taken into account.
+
 ## Source Code Organization
 The main implementation is contained in `model.py`, `preprocess.py` and `layout_metrics.py`. 
 
