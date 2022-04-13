@@ -19,10 +19,10 @@ Since GNNs are trained on the graph adjacent matrix, GNN-based approaches can ev
 
 ## Problem Formulation
 The goal of the project is to give scores on different layouts on the save graph, based on the graph connectivity features and the layout features.
-This is achieved by first generate a subgraph of the original $G$, and then use the $GAE$ model to reconstruct the original graph, using the node positions as node features. For mode detailed explanation, refer to `report.pdf`.
+This is achieved by first generate a subgraph of the original graph, and then use the GAE model to reconstruct the original graph, using the node positions as node features. For mode detailed explanation, refer to `report.pdf`.
 
 ## Results
-Sections below presents the results of this project. 
+Sections below presents the results of this p   roject. 
 More detailed explanation and insights are described in Section 5 in `report.pdf`. 
 ### Reconstruction Efficacy
 The efficacy of reconstructing adjacent matrix from node coordinates is not shown by previous studies.
@@ -41,15 +41,15 @@ The average accuracy is **0.769** for GAE and **0.776** for VGAE, proving that r
 
 ### Correlation to Aesthetics Metrics
 To evaluate the ranking result, and therefore the efficacy of the project, the correlation between test reconstruction loss and aesthetic metrics is investigated.
-Three aesthetic metrics are used: (1)$M_l$: edge length variation (2) $M_a$: Minimum Angle (3) $E_c$: Edge crossings.
+Three aesthetic metrics are used: (1)M_l: edge length variation (2) M_a: Minimum Angle (3) E_c: Edge crossings.
 
-The correlation score $coef$ is calculated by the `Pearson correlation coefficients`.
+The correlation score is calculated by the `Pearson correlation coefficients`.
 A score of 1 means strong positive correlation, -1 means strong negative correlation, and 0 means no correlation.
 Since the three aesthetic metrics are expected to be minimized as well as the reconstruction loss,
-a $coef$ score of 1 should indicate a better performance.
-Table below shows the correlation score $coef$ between reconstuction loss and the three aesthetic metrics on four test graphs for GAE/VGAE.
+a score of 1 should indicate a better performance.
+Table below shows the correlation score between reconstuction loss and the three aesthetic metrics on four test graphs for GAE/VGAE.
 
-|graph\metric | $M_l$ | $M_a$ | $E_c$ |
+|graph\metric | M_l | M_a | E_c |
 | :--: | :----: | :-------: | :----------: |
 | 0 | -0.648/**0.904** | -0.530/0.612 | 0.604/0.040|    
 | 414 | -0.425/0.479 | 0.147/**0.861** | -0.425/-0.289  |
